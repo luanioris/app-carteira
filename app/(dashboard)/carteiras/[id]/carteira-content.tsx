@@ -5,12 +5,12 @@ import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, TrendingUp, TrendingDown, DollarSign, PieChart, PlusCircle, Banknote, RefreshCw, BarChart3, Target } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { getQuotes } from '@/lib/api/brapi'
 import { DeletarCarteiraButton } from './deletar-button'
 import { AtualizarPrecoButton } from './atualizar-preco-button'
 import { DuplicarCarteiraButton } from './duplicar-button'
 import { ExportarExcelButton } from './exportar-excel-button'
 import { HistoricoCarteira } from './historico-carteira'
+import { CacheUpdater } from '../../cache-updater'
 
 export async function CarteiraContent(props: { id: string }) {
     const params = { id: props.id }
@@ -60,22 +60,20 @@ export async function CarteiraContent(props: { id: string }) {
 
     // Se a carteira está inativa (migrada), NÃO buscar cotações da API
     const carteiraAtiva = carteira.ativa !== false
-
-    // Buscar cotações atuais de todos os tickers (APENAS se carteira ativa)
     const tickers = carteira.posicoes.map((p: any) => p.ticker)
-    let cotacoesApi: Record<string, number> = {}
 
-    if (carteiraAtiva) {
-        try {
-            const quotes = await getQuotes(tickers)
-            quotes.forEach(q => {
-                // Normaliza o símbolo removendo sufixo .SA se existir para garantir match com o banco
-                const normalizedSymbol = q.symbol.endsWith('.SA') ? q.symbol.replace('.SA', '') : q.symbol
-                cotacoesApi[normalizedSymbol] = q.regularMarketPrice
-            })
-        } catch (error) {
-            console.error('Erro ao buscar cotações:', error)
-        }
+    // Buscar cotações atuais do CACHE (substituindo API direta para performance e consistência)
+    let cotacoesCache: Record<string, number> = {}
+
+    if (carteiraAtiva && tickers.length > 0) {
+        const { data: cacheData } = await supabase
+            .from('cotacoes_cache')
+            .select('ticker, preco')
+            .in('ticker', tickers)
+
+        cacheData?.forEach(c => {
+            cotacoesCache[c.ticker] = c.preco
+        })
     }
 
     // Buscar cotações manuais (APENAS se carteira ativa)
@@ -103,13 +101,13 @@ export async function CarteiraContent(props: { id: string }) {
             temCotacaoAutomatica = false // Nunca permitir edição em carteira inativa
         } else {
             // Carteira ATIVA: lógica normal
-            const precoApi = cotacoesApi[pos.ticker]
+            const precoApi = cotacoesCache[pos.ticker]
             const precoManual = cotacoesManuaisMap[pos.ticker]
 
-            // Prioridade: Manual > API > Preço Médio
+            // Prioridade: Manual > Cache (Yahoo) > Preço Médio
             precoAtual = precoManual || precoApi || pos.preco_medio
 
-            // Flag para exibir botão de edição
+            // Flag para exibir botão de edição (se tiver cache, considera automática)
             temCotacaoAutomatica = !!precoApi
         }
 
@@ -159,7 +157,10 @@ export async function CarteiraContent(props: { id: string }) {
     }, {})
 
     return (
-        <div className="space-y-6 animate-fade-in">
+        <div className="space-y-6 animate-fade-in relative">
+            {/* Atualizador de Cache em Background */}
+            <CacheUpdater />
+
             {/* Header */}
             <div className="flex items-center gap-4">
                 <Link href="/carteiras">

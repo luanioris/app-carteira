@@ -1,0 +1,30 @@
+name: Daily Quote Update
+
+on:
+  schedule:
+    # 09:00 UTC = 06:00 Brasilia
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+
+jobs:
+  update-quotes:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Run Update Script
+      env:
+        NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+        SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      run: npx tsx scripts/daily-update.ts

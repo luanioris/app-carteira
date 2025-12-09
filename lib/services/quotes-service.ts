@@ -85,6 +85,16 @@ export class QuotesService {
     }
 
     /**
+     * Busca cotações EXCLUSIVAMENTE no Yahoo Finance (sem fallback)
+     * Utiliza a mesma lógica de normalização e retry do serviço interno.
+     */
+    static async getQuotesYahoo(tickers: string[]): Promise<Quote[]> {
+        // Normaliza para maiúsculo
+        const requestTickers = tickers.map(t => t.toUpperCase())
+        return this.fetchFromYahoo(requestTickers)
+    }
+
+    /**
      * Busca cotações da Brapi usando endpoint agrupado
      * Agrupa tickers na URL (ex: /quote/PETR4,VALE3) para economizar requisições
      */
