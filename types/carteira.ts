@@ -17,6 +17,7 @@ export type Carteira = {
   data_criacao: string
   data_ultimo_rebalanceamento: string | null
   ativa: boolean
+  notas: string | null
   created_at: string
   updated_at: string
 }

@@ -10,6 +10,7 @@ import { AtualizarPrecoButton } from './atualizar-preco-button'
 import { DuplicarCarteiraButton } from './duplicar-button'
 import { ExportarExcelButton } from './exportar-excel-button'
 import { HistoricoCarteira } from './historico-carteira'
+import { NotasCarteira } from './notas-carteira'
 import { CacheUpdater } from '../../cache-updater'
 
 export async function CarteiraContent(props: { id: string }) {
@@ -302,6 +303,12 @@ export async function CarteiraContent(props: { id: string }) {
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Notas da Carteira */}
+            <NotasCarteira
+                carteiraId={carteira.id}
+                notasIniciais={carteira.notas}
+            />
 
             {/* Distribuição por Tipo */}
             <Card>

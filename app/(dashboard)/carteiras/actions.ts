@@ -245,6 +245,42 @@ export async function atualizarPrecoManual(carteiraId: string, ticker: string, n
 }
 
 /**
+ * Atualiza as notas de uma carteira
+ */
+export async function atualizarNotas(carteiraId: string, notas: string) {
+    'use server'
+    const supabase = await createClient()
+
+    // Verificar permissão
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Não autenticado')
+
+    const { data: carteira } = await supabase
+        .from('carteiras')
+        .select('user_id')
+        .eq('id', carteiraId)
+        .single()
+
+    if (!carteira || carteira.user_id !== user.id) {
+        throw new Error('Sem permissão')
+    }
+
+    // Atualizar notas
+    const { error } = await supabase
+        .from('carteiras')
+        .update({ notas })
+        .eq('id', carteiraId)
+
+    if (error) {
+        console.error('Erro ao atualizar notas:', error)
+        throw new Error('Não foi possível atualizar as notas')
+    }
+
+    revalidatePath(`/carteiras/${carteiraId}`)
+}
+
+
+/**
  * Duplica uma carteira existente para fins de teste
  */
 export async function duplicarCarteira(carteiraId: string, novoNome?: string) {
